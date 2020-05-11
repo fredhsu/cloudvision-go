@@ -25,14 +25,22 @@ type sonic struct {
 func updatesFromSystem() ([]*gnmi.Update, error) {
 
 	return []*gnmi.Update{
-		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC Software Version", "software-version"),
+		pgnmi.Update(pgnmi.PlatformComponentPath("SONiC", "name"),
+			pgnmi.Strval("SONiC")),
+		pgnmi.Update(pgnmi.PlatformComponentConfigPath("SONiC", "name"),
+			pgnmi.Strval("SONiC")),
+		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "name"),
+			pgnmi.Strval("SONiC")),
+		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "type"),
+			pgnmi.Strval("openconfig-platform-types:CHASSIS")),
+		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "software-version"),
 			pgnmi.Strval("SONiC.staphylo.108945.1")),
-		// pgnmi.Update(pgnmi.IntfStateCountersPath(intfName, "in-errors"),
-		// 	pgnmi.Uintval(inErrs)),
 	}, nil
+
 }
 
-func (d *sonic) updateInterfaces() ([]*gnmi.SetRequest, error) {
+func (d *sonic) updatePlatform() ([]*gnmi.SetRequest, error) {
+
 	setRequest := new(gnmi.SetRequest)
 	updates, err := updatesFromSystem()
 	if err != nil {
@@ -56,13 +64,13 @@ func (d *sonic) handleErrors(ctx context.Context) error {
 }
 
 func (d *sonic) Run(ctx context.Context) error {
-	// Run updateInterfaces at the specified polling interval,
+	// Run updatePlatform at the specified polling interval,
 	// forever. PollForever sends the updates produced by
-	// updateInterfaces to the gNMI client and sends any
+	// updatePlatorm to the gNMI client and sends any
 	// resulting errors to the error channel to be handled by
 	// handleErrors.
 	go pgnmi.PollForever(ctx, d.client, d.pollInterval,
-		d.updateInterfaces, d.errc)
+		d.updatePlatform, d.errc)
 
 	// handleErrors only returns if it sees an error.
 	return d.handleErrors(ctx)

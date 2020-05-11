@@ -7,6 +7,7 @@ package sonic
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/aristanetworks/cloudvision-go/provider"
@@ -25,6 +26,7 @@ type sonic struct {
 func updatesFromSystem() ([]*gnmi.Update, error) {
 
 	return []*gnmi.Update{
+		// Platform components to define teh part number and serial number
 		pgnmi.Update(pgnmi.PlatformComponentPath("SONiC", "name"),
 			pgnmi.Strval("SONiC")),
 		pgnmi.Update(pgnmi.PlatformComponentConfigPath("SONiC", "name"),
@@ -35,20 +37,46 @@ func updatesFromSystem() ([]*gnmi.Update, error) {
 			pgnmi.Strval("openconfig-platform-types:CHASSIS")),
 		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "software-version"),
 			pgnmi.Strval("SONiC.staphylo.108945.1")),
+		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "part-no"),
+			pgnmi.Strval("Arista-7050-QX-32S")),
+		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "hardware-version"),
+			pgnmi.Strval("Arista-7050-QX-32S")),
+		pgnmi.Update(pgnmi.PlatformComponentStatePath("SONiC", "mfg-name"),
+			pgnmi.Strval("Arista Networks")),
+		pgnmi.Update(SystemConfigPath("hostname"), pgnmi.Strval("sonic-leaf1")),
+		pgnmi.Update(SystemStatePath("hostname"), pgnmi.Strval("sonic-leaf1")),
+		// TODO: boot time -> uptime and mgmt IP address
+		// pgnmi.Update(SystemStatePath("boot-time"), &gnmi.TypedValue{}),
+		pgnmi.Update(pgnmi.LldpStatePath("chassis-id"), pgnmi.Strval("00:1c:73:e1:be:ef")),
 	}, nil
+	// return Path("lldp", "interfaces", ListWithKey("interface", "name",
+	// intfName), "state", "counters", leafName)
+}
 
+// SystemConfigPath provides an easy gnmi path to the system config settings
+func SystemConfigPath(leafName string) *gnmi.Path {
+	return pgnmi.Path("system", "config", leafName)
+}
+
+// SystemStatePath provides an easy gnmi path to the system state settings
+func SystemStatePath(leafName string) *gnmi.Path {
+	return pgnmi.Path("system", "state", leafName)
 }
 
 func (d *sonic) updatePlatform() ([]*gnmi.SetRequest, error) {
 
+	log.Printf("updatePlatform")
 	setRequest := new(gnmi.SetRequest)
 	updates, err := updatesFromSystem()
 	if err != nil {
 		return nil, err
 	}
 
-	setRequest.Delete = []*gnmi.Path{pgnmi.Path("platform")}
+	setRequest.Delete = []*gnmi.Path{pgnmi.Path("components")}
+	setRequest.Delete = []*gnmi.Path{pgnmi.Path("system")}
+	setRequest.Delete = []*gnmi.Path{pgnmi.Path("lldp")}
 	setRequest.Replace = updates
+	log.Printf("setRquests done")
 	return []*gnmi.SetRequest{setRequest}, nil
 }
 
